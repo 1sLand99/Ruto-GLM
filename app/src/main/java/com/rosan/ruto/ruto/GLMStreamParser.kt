@@ -1,6 +1,6 @@
 package com.rosan.ruto.ruto
 
-import com.rosan.ruto.autoglm.script.RutoLexerException
+import com.rosan.ruto.ruto.script.RutoLexerException
 
 class GLMStreamParser {
     private enum class ParseState(val tag: String) {

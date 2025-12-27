@@ -3,6 +3,7 @@ package com.rosan.ruto.service
 import android.inputmethodservice.InputMethodService
 import android.os.IBinder
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 
 class MyInputMethodService : InputMethodService(), IImeManager {
@@ -38,13 +39,8 @@ class MyInputMethodService : InputMethodService(), IImeManager {
         inputConnection?.commitText(text, newCursorPosition)
 
     private fun clearText() = inputConnection?.let {
-        val beforeCursor = it.getTextBeforeCursor(Int.MAX_VALUE, 0)
-        val before = beforeCursor?.length ?: 0
-        val afterCursor = it.getTextAfterCursor(Int.MAX_VALUE, 0)
-        val after = afterCursor?.length ?: 0
-
-        if (before >= 0 || after > 0)
-            it.deleteSurroundingText(before, after)
+        it.setSelection(0, Int.MAX_VALUE)
+        it.commitText("",0)
     }
 
     override fun readyInput() {

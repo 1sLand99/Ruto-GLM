@@ -1,4 +1,4 @@
-package com.rosan.ruto.autoglm.script
+package com.rosan.ruto.ruto.script
 
 data class RutoToken(
     val type: Type,
@@ -15,7 +15,13 @@ data class RutoToken(
 
         COMMA, // ,
 
+        ADD, // +
+        SUB, // -
+        MUL, // *
+        DIV, // /
+        MOD, // %
         EQUALS, // =
+
         NUMBER, // 123
         STRING, // "abc"
     }

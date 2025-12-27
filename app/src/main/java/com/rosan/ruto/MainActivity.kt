@@ -46,8 +46,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.rosan.installer.ext.util.toast
 import com.rosan.ruto.device.impl.ShizukuDeviceImpl
+import com.rosan.ruto.ruto.DefaultRutoRuntime
 import com.rosan.ruto.ruto.RutoGLM
-import com.rosan.ruto.ruto.ShizukuGLMRuntime
 import com.rosan.ruto.ui.theme.RutoTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -158,10 +158,16 @@ fun Greeting(innerPadding: PaddingValues = PaddingValues(0.dp)) {
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(innerPadding)
-                .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (it) Processing(thinking)
-            else Confining(task, modelUrl, modelId, apiKey)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                if (it) Processing(thinking)
+                else Confining(task, modelUrl, modelId, apiKey)
+            }
 
             Spacer(
                 Modifier
@@ -179,8 +185,11 @@ fun Greeting(innerPadding: PaddingValues = PaddingValues(0.dp)) {
                         runCatching {
                             thinking = ""
                             ShizukuDeviceImpl(context).use { device ->
+                                val runtime = DefaultRutoRuntime(
+                                    device,
+                                    Display.DEFAULT_DISPLAY
+                                )
                                 Log.e("r0s", "device $device")
-                                val runtime = ShizukuGLMRuntime(device, displayId)
 
                                 Log.e("r0s", "runtime $runtime")
                                 val glm = RutoGLM(
@@ -202,6 +211,7 @@ fun Greeting(innerPadding: PaddingValues = PaddingValues(0.dp)) {
                                         thinking = it
                                     }
                                 )
+                                context.toast("任务完成")
                                 Log.e("r0s", "end")
                             }
                         }.onFailure {
@@ -263,5 +273,7 @@ fun Confining(
 
 @Composable
 fun Processing(thinking: String) {
-    Text(text = thinking)
+    Text(
+        text = thinking
+    )
 }

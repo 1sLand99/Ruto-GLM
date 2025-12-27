@@ -23,12 +23,14 @@ class BigModelSession(
     fun request(
         text: String? = null, image: ImageContent? = null
     ): Flow<StreamingChatModelReply> {
+        Log.e("r0s", "request $text")
         val assist = StringBuilder()
         return model.chatFlow {
             messages(memory)
 
             val contents = mutableListOf<Content>()
-            text?.let { contents.add(TextContent.from(it)) }
+            if (!text.isNullOrEmpty())
+                contents.add(TextContent.from(text))
             image?.let { contents.add(it) }
 
             message(UserMessage.from(contents))
@@ -39,7 +41,7 @@ class BigModelSession(
             assist.append(reply.partialResponse)
         }.onCompletion {
             Log.e("r0s", "completion")
-            text?.let { memory.add(UserMessage.from(text)) }
+            if (!text.isNullOrEmpty()) memory.add(UserMessage.from(text))
             memory.add(AiMessage.from(assist.toString()))
         }
     }

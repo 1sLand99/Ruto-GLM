@@ -56,9 +56,20 @@ class ImeManagerService @Keep constructor(
 
     private fun <T> requireIme(action: (MyInputMethodService) -> T): T {
         val curImeId = getCurrentImeId()
-        require(curImeId == myImeId) { "The input method must be ready first" }
+//        require(curImeId == myImeId) { "The input method must be ready first" }
+        try {
+            if (curImeId != myImeId) {
+                readyInput()
+                for (i in 0 until 150) {
+                    Thread.sleep(100)
+                    if (MyInputMethodService.INSTANCE != null) break
+                }
+            }
 
-        return action.invoke(MyInputMethodService.INSTANCE!!)
+            return action.invoke(MyInputMethodService.INSTANCE!!)
+        } finally {
+            if (curImeId != myImeId) finishInput()
+        }
     }
 
     override fun text(text: String) {

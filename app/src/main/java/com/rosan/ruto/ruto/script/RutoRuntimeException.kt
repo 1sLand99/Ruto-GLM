@@ -1,4 +1,4 @@
-package com.rosan.ruto.autoglm.script
+package com.rosan.ruto.ruto.script
 
 class RutoRuntimeException(msg: String ) : Exception(msg) {
 }

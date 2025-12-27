@@ -1,6 +1,4 @@
-package com.rosan.ruto.autoglm.script
-
-import kotlin.collections.get
+package com.rosan.ruto.ruto.script
 
 class RutoLexer(private val input: String) {
     companion object {
@@ -10,6 +8,13 @@ class RutoLexer(private val input: String) {
             '[' to RutoToken.Type.BRACKET_L,
             ']' to RutoToken.Type.BRACKET_R,
             ',' to RutoToken.Type.COMMA,
+
+            '+' to RutoToken.Type.ADD,
+            '-' to RutoToken.Type.SUB,
+            '*' to RutoToken.Type.MUL,
+            '/' to RutoToken.Type.DIV,
+            '%' to RutoToken.Type.MOD,
+
             '=' to RutoToken.Type.EQUALS
         ).mapValues { RutoToken(it.value, it.key.toString()) }
     }
@@ -25,7 +30,16 @@ class RutoLexer(private val input: String) {
     private fun advanceNotNull(): Char =
         advance() ?: throw RutoLexerException("Unexpected ending")
 
-    private fun read(length: Int): String = input.substring(cursor, length)
+    private fun read(length: Int): String =
+        input.substring(cursor, let { cursor += length; cursor })
+
+    private fun readUntil(c: Char): String {
+        val builder = StringBuilder()
+        while (notAtEnd() && peek() != c) {
+            builder.append(advanceNotNull())
+        }
+        return builder.toString()
+    }
 
     private fun consume(c: Char): Char {
         if (peek() != c) throw RutoParserException("Expected $c but got ${peek()}")
@@ -73,7 +87,7 @@ class RutoLexer(private val input: String) {
 
     private fun readIdentifier(): String {
         val start = cursor
-        while (peek()?.isLetterOrDigit() == true) cursor++
+        while (peek()?.let { it.isLetterOrDigit() || it == '_' } == true) cursor++
         return input.substring(start, cursor)
     }
 
@@ -93,18 +107,24 @@ class RutoLexer(private val input: String) {
                     'b' -> builder.append('\b')
 
                     'u' -> {
-                        val hex = read(4)
-                        val unicode = runCatching { hex.toInt(0xf).toChar() }.getOrElse {
+                        val hex = if (peek() == '{') {
+                            advance()
+                            readUntil('}').apply {
+                                advanceNotNull()
+                            }
+                        } else read(4)
+                        val unicode = runCatching {
+                            hex.toInt(16)
+                        }.getOrElse {
                             throw RutoLexerException("Incomplete unicode escape: $hex")
                         }
-                        builder.append(unicode)
+                        builder.appendCodePoint(unicode)
                     }
 
                     else -> throw RutoLexerException("Illegal escape character: \\$escape")
                 }
             } else builder.append(c)
         }
-
         consume('"')
         return builder.toString()
     }
