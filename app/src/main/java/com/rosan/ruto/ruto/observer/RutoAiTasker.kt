@@ -21,6 +21,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
@@ -41,18 +42,17 @@ class RutoAiTasker(
     override fun onInitialize(scope: CoroutineScope) {
         job = scope.launch {
             conversationDao.observeWhenStatusUpperTime(
-                ConversationStatus.COMPLETED,
-                updatedAt = System.currentTimeMillis()
+                ConversationStatus.COMPLETED, updatedAt = System.currentTimeMillis()
             )
-                .flatMapConcat {
-                    Log.e("r0s", "tasker map ${it.joinToString()}")
-                    it.asFlow()
+                .scan(emptyList<ConversationModel>() to emptyList<ConversationModel>()) { (oldValue, _), newValue ->
+                    newValue to newValue.filter { it !in oldValue }
+                }.flatMapConcat { (_, handleValue) ->
+                    handleValue.asFlow()
                 }.mapNotNull {
                     val displayId = it.displayId ?: return@mapNotNull null
                     Log.e("r0s", "tasker $it")
                     Log.e(
-                        "r0s",
-                        "tasker display ${device.displayManager.getDisplayInfo(displayId)}"
+                        "r0s", "tasker display ${device.displayManager.getDisplayInfo(displayId)}"
                     )
                     displayId to it
                 }.collect { (displayId, conversation) ->
