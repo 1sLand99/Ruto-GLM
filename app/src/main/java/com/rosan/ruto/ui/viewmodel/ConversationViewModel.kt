@@ -26,18 +26,18 @@ class ConversationViewModel(
 
     fun add(message: MessageModel) {
         viewModelScope.launch {
+            messageDao.add(message)
             conversationDao.updateStatus(
                 conversationId,
                 status = ConversationStatus.WAITING
             )
-            messageDao.add(message)
         }
     }
 
     fun addImage(inputStream: InputStream) {
         viewModelScope.launch {
-            conversationDao.updateStatus(conversationId, status = ConversationStatus.WAITING)
             messageDao.addImage(conversationId, inputStream)
+            conversationDao.updateStatus(conversationId, status = ConversationStatus.WAITING)
         }
     }
 
