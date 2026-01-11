@@ -2,22 +2,21 @@ package com.rosan.ruto.service
 
 import android.content.ComponentName
 import android.content.Context
-import android.os.ServiceManager
 import android.provider.Settings
 import android.util.Log
 import androidx.annotation.Keep
-import com.rosan.installer.ext.service.ShizukuServiceManager
+import com.rosan.installer.ext.service.ServiceManager
 import com.rosan.installer.ext.util.IInputMethodManagerUtil
 import kotlinx.coroutines.runBlocking
 
 class ImeManagerService @Keep constructor(
     private val context: Context,
-    shizuku: ShizukuServiceManager
+    serviceManager: ServiceManager
 ) : IImeManager.Stub() {
     private val manager: IInputMethodManagerUtil by lazy {
         runBlocking {
-            val binder = ServiceManager.getService(Context.INPUT_METHOD_SERVICE)
-            val binderWrapper = shizuku.binderWrapper(binder)
+            val binder = android.os.ServiceManager.getService(Context.INPUT_METHOD_SERVICE)
+            val binderWrapper = serviceManager.binderWrapper(binder)
             IInputMethodManagerUtil(binderWrapper)
         }
     }

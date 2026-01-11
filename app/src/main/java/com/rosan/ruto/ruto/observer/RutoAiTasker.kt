@@ -1,6 +1,7 @@
 package com.rosan.ruto.ruto.observer
 
 import android.content.Context
+import android.util.Log
 import com.rosan.installer.ext.util.toast
 import com.rosan.ruto.data.AppDatabase
 import com.rosan.ruto.data.model.ConversationModel
@@ -8,7 +9,7 @@ import com.rosan.ruto.data.model.MessageModel
 import com.rosan.ruto.data.model.conversation.ConversationStatus
 import com.rosan.ruto.data.model.message.MessageSource
 import com.rosan.ruto.data.model.message.MessageType
-import com.rosan.ruto.device.repo.DeviceRepo
+import com.rosan.ruto.device.DeviceManager
 import com.rosan.ruto.ruto.DefaultRutoRuntime
 import com.rosan.ruto.ruto.GLMCommandParser
 import com.rosan.ruto.ruto.repo.RutoObserver
@@ -25,7 +26,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 class RutoAiTasker(
-    private val context: Context, database: AppDatabase, private val device: DeviceRepo
+    private val context: Context, database: AppDatabase, private val deviceManager: DeviceManager
 ) : RutoObserver {
     private val conversationDao = database.conversations()
 
@@ -110,8 +111,12 @@ class RutoAiTasker(
         displayId: Int, conversation: ConversationModel
     ) {
         try {
-            val bitmap = device.displayManager.capture(displayId).bitmap
-            messageDao.addImage(conversation.id, bitmap)
+            val bitmap = deviceManager.getDisplayManager().capture(displayId).bitmap
+            try {
+                messageDao.addImage(conversation.id, bitmap)
+            } finally {
+                bitmap.recycle()
+            }
             conversationDao.updateStatus(conversation.id, ConversationStatus.WAITING)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -124,19 +129,24 @@ class RutoAiTasker(
     ) {
         val response = message.content
         val parsed = GLMCommandParser.parse(response)
-        if (parsed !is GLMCommandParser.Status.Completed) return
+        if (parsed !is GLMCommandParser.Status.Completed) {
+            messageDao.addText(conversation.id, "错误，返回未按照要求格式。")
+            conversationDao.updateStatus(conversation.id, ConversationStatus.WAITING)
+            return
+        }
         if (parsed.command.mapping == "finish") {
             context.toast("已完成：" + conversation.name)
             return
         }
-        val runtime = DefaultRutoRuntime(device, displayId)
+        val runtime = DefaultRutoRuntime(deviceManager, displayId)
         try {
             parsed.callFunction(runtime)
             delay(1000)
             processAiCaptureRequest(displayId, conversation)
         } catch (e: Exception) {
             e.printStackTrace()
-            conversationDao.updateStatus(conversation.id, ConversationStatus.ERROR)
+            messageDao.addText(conversation.id, "错误，返回未按照要求格式。")
+            conversationDao.updateStatus(conversation.id, ConversationStatus.WAITING)
         }
     }
 }

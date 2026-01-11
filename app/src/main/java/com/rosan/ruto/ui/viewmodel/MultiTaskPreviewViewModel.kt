@@ -5,7 +5,7 @@ import android.view.Surface
 import androidx.compose.ui.geometry.Size
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rosan.ruto.device.repo.DeviceRepo
+import com.rosan.ruto.device.DeviceManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 
 class MultiTaskPreviewViewModel(
     private val displayIds: List<Int>,
-    private val device: DeviceRepo
+    private val deviceManager: DeviceManager
 ) : ViewModel() {
     private val mirroredDisplayIds = mutableMapOf<Int, Int>()
 
@@ -23,7 +23,7 @@ class MultiTaskPreviewViewModel(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             _displaySizes.value = displayIds.associateWith {
-                val displayInfo = device.displayManager.getDisplayInfo(it)
+                val displayInfo = deviceManager.getDisplayManager().getDisplayInfo(it)
                 Size(displayInfo.logicalWidth.toFloat(), displayInfo.logicalHeight.toFloat())
             }
         }
@@ -31,7 +31,7 @@ class MultiTaskPreviewViewModel(
 
     fun setSurface(displayId: Int, surface: Surface?) {
         viewModelScope.launch(Dispatchers.IO) {
-            val dm = device.displayManager
+            val dm = deviceManager.getDisplayManager()
             val id = mirroredDisplayIds[displayId] ?: displayId
             if (dm.isMyDisplay(id)) {
                 dm.setSurface(id, surface)
@@ -46,17 +46,19 @@ class MultiTaskPreviewViewModel(
 
     fun clickBack(displayId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            device.inputManager.clickBack(getTargetDisplayId(displayId))
+            deviceManager.getInputManager().clickBack(getTargetDisplayId(displayId))
         }
     }
 
     fun injectEvent(displayId: Int, event: InputEvent) {
-        device.inputManager.injectEvent(event, getTargetDisplayId(displayId))
+        viewModelScope.launch(Dispatchers.IO) {
+            deviceManager.getInputManager().injectEvent(event, getTargetDisplayId(displayId))
+        }
     }
 
     fun launch(displayId: Int, packageName: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            device.activityManager.startApp(packageName, getTargetDisplayId(displayId))
+            deviceManager.getActivityManager().startApp(packageName, getTargetDisplayId(displayId))
         }
     }
 
@@ -64,7 +66,7 @@ class MultiTaskPreviewViewModel(
         super.onCleared()
         viewModelScope.launch(Dispatchers.IO) {
             mirroredDisplayIds.values.forEach {
-                device.displayManager.release(it)
+                deviceManager.getDisplayManager().release(it)
             }
             mirroredDisplayIds.clear()
         }

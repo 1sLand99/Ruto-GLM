@@ -2,7 +2,7 @@ package com.rosan.ruto.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.rosan.ruto.device.repo.DeviceRepo
+import com.rosan.ruto.device.DeviceManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +25,7 @@ data class ScreenListUiState(
     val isRefreshing: Boolean = false
 )
 
-class ScreenListViewModel(private val device: DeviceRepo) : ViewModel() {
+class ScreenListViewModel(private val deviceManager: DeviceManager) : ViewModel() {
     private val _uiState = MutableStateFlow(ScreenListUiState())
     val uiState: StateFlow<ScreenListUiState> = _uiState.asStateFlow()
 
@@ -33,7 +33,7 @@ class ScreenListViewModel(private val device: DeviceRepo) : ViewModel() {
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshing = true) }
             delay(1000)
-            val displayItems = device.displayManager.displays.map { displayInfo ->
+            val displayItems = deviceManager.getDisplayManager().displays.map { displayInfo ->
                 DisplayItem(
                     displayId = displayInfo.displayId,
                     name = displayInfo.name,
@@ -41,7 +41,8 @@ class ScreenListViewModel(private val device: DeviceRepo) : ViewModel() {
                     logicalWidth = displayInfo.logicalWidth,
                     logicalHeight = displayInfo.logicalHeight,
                     logicalDensityDpi = displayInfo.logicalDensityDpi,
-                    isMyDisplay = device.displayManager.isMyDisplay(displayInfo.displayId)
+                    isMyDisplay = deviceManager.getDisplayManager()
+                        .isMyDisplay(displayInfo.displayId)
                 )
             }
             _uiState.update { it.copy(displays = displayItems, isRefreshing = false) }
@@ -50,14 +51,14 @@ class ScreenListViewModel(private val device: DeviceRepo) : ViewModel() {
 
     fun createDisplay(name: String, width: Int, height: Int, density: Int) {
         viewModelScope.launch {
-            device.displayManager.createDisplay(name, width, height, density, null)
+            deviceManager.getDisplayManager().createDisplay(name, width, height, density, null)
             loadDisplays()
         }
     }
 
     fun release(displayId: Int) {
         viewModelScope.launch {
-            device.displayManager.release(displayId)
+            deviceManager.getDisplayManager().release(displayId)
             loadDisplays()
         }
     }

@@ -3,7 +3,7 @@ package com.rosan.ruto.ruto.script
 import java.math.BigDecimal
 
 object RutoInterpreter {
-    fun interpret(runtime: RutoRuntime, code: String): RutoASTLiteral {
+    suspend fun interpret(runtime: RutoRuntime, code: String): RutoASTLiteral {
         val tokens = RutoLexer(code).tokenize()
         val astNodes = RutoParser(tokens).parse()
         var result: RutoASTLiteral = RutoASTLiteral.Void
@@ -13,7 +13,7 @@ object RutoInterpreter {
         return result
     }
 
-    fun interpret(runtime: RutoRuntime, node: RutoASTNode): RutoASTLiteral {
+    suspend fun interpret(runtime: RutoRuntime, node: RutoASTNode): RutoASTLiteral {
         return when (node) {
             is RutoASTNode.BooleanValue -> RutoASTLiteral.BooleanValue(node.value == "true")
             is RutoASTNode.NumberValue -> RutoASTLiteral.NumberValue(BigDecimal(node.value))

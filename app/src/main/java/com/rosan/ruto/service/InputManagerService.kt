@@ -5,7 +5,6 @@ import android.graphics.PointF
 import android.os.Build
 import android.os.IBinder
 import android.os.Process
-import android.os.ServiceManager
 import android.os.SystemClock
 import android.util.Log
 import android.view.Display
@@ -14,13 +13,13 @@ import android.view.InputEvent
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.annotation.Keep
-import com.rosan.installer.ext.service.ShizukuServiceManager
+import com.rosan.installer.ext.service.ServiceManager
 import com.rosan.installer.ext.util.InputEventUtil
 import kotlinx.coroutines.runBlocking
 import kotlin.math.pow
 
 class InputManagerService @Keep constructor(
-    shizuku: ShizukuServiceManager,
+    serviceManager: ServiceManager,
     private val clickDuration: Long = 100,
     private val clickInterval: Long = 100,
     private val longClickDuration: Long = 1000,
@@ -32,8 +31,8 @@ class InputManagerService @Keep constructor(
 
     private val manager by lazy<android.hardware.input.IInputManager> {
         runBlocking {
-            val binder = ServiceManager.getService(Context.INPUT_SERVICE) as IBinder
-            val wrapper = shizuku.binderWrapper(binder)
+            val binder = android.os.ServiceManager.getService(Context.INPUT_SERVICE) as IBinder
+            val wrapper = serviceManager.binderWrapper(binder)
             android.hardware.input.IInputManager.Stub.asInterface(wrapper)
         }
     }

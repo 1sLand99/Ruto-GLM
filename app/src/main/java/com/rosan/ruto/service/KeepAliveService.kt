@@ -9,7 +9,6 @@ import android.content.Intent
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import com.rosan.ruto.device.repo.DeviceRepo
 import com.rosan.ruto.ruto.repo.RutoObserver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +20,6 @@ class KeepAliveService : Service(), KoinComponent {
 
     private val CHANNEL_ID = "KeepAliveServiceChannel"
     private val NOTIFICATION_ID = 1
-
-    private val device: DeviceRepo by inject()
 
     companion object {
         var instance: KeepAliveService? = null

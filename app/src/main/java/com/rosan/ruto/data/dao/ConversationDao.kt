@@ -53,7 +53,10 @@ interface ConversationDao {
     fun observeStatus(id: Long): Flow<ConversationStatus?>
 
     @Query("SELECT * FROM conversations WHERE status = :status AND updated_at > :updatedAt")
-    fun observeWhenStatusUpperTime(status: ConversationStatus, updatedAt: Long): Flow<List<ConversationModel>>
+    fun observeWhenStatusUpperTime(
+        status: ConversationStatus,
+        updatedAt: Long
+    ): Flow<List<ConversationModel>>
 
     @Query("SELECT * FROM conversations")
     fun observeAll(): Flow<List<ConversationModel>>
@@ -69,6 +72,17 @@ abstract class MessageDao : KoinComponent {
 
     @Insert
     abstract suspend fun add(message: MessageModel): Long
+
+    @Transaction
+    open suspend fun addText(conversationId: Long, text: String): Long {
+        val message = MessageModel(
+            conversationId = conversationId,
+            source = MessageSource.USER,
+            type = MessageType.TEXT,
+            content = text
+        )
+        return add(message)
+    }
 
     @Transaction
     open suspend fun addImage(

@@ -2,7 +2,7 @@ package com.rosan.ruto.ruto.script
 
 import java.math.BigDecimal
 
-data class RutoFunction(val action: Scope.() -> RutoASTLiteral) {
+data class RutoFunction(val action: suspend Scope.() -> RutoASTLiteral) {
     class Scope(val literals: List<RutoASTLiteral>) {
         val args = literals.map { it.unwrap() }
 

@@ -1,12 +1,22 @@
 package com.rosan.ruto.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.rosan.ruto.ui.compose.ConversationListScreen
@@ -23,7 +33,11 @@ fun NavGraph() {
     val navController = rememberNavController()
     val insets = WindowInsets.safeContent
 
-    NavHost(navController = navController, startDestination = Destinations.SPLASH) {
+    NavHost(
+        navController = navController,
+        modifier = Modifier.fillMaxSize(),
+        startDestination = Destinations.SPLASH
+    ) {
         composable(Destinations.SPLASH) {
             SplashScreen(navController, insets.asPaddingValues())
         }
@@ -61,5 +75,24 @@ fun NavGraph() {
                 ?.mapNotNull { it.toIntOrNull() } ?: emptyList()
             MultiTaskPreviewScreen(navController, displayIds)
         }
+    }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val lifecycleCurrentState by navBackStackEntry?.lifecycle?.currentStateAsState() ?: remember {
+        mutableStateOf(Lifecycle.State.INITIALIZED)
+    }
+
+    if (lifecycleCurrentState != Lifecycle.State.RESUMED) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            awaitPointerEvent()
+                                .changes.forEach { it.consume() }
+                        }
+                    }
+                }
+        )
     }
 }

@@ -4,7 +4,14 @@ import android.os.IBinder
 import java.io.Closeable
 
 interface ServiceManager : Closeable {
-    suspend fun ping(): Boolean
+    suspend fun isAlive(): Boolean = try {
+        ensureConnected()
+        true
+    } catch (e: Exception) {
+        false
+    }
+
+    suspend fun ensureConnected()
 
     suspend fun binderWrapper(binder: IBinder): IBinder
 

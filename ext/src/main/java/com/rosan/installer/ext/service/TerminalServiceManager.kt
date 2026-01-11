@@ -7,36 +7,46 @@ import com.rosan.app_process.AppProcess
 import com.rosan.installer.ext.exception.RootNotWorkException
 import com.rosan.installer.ext.exception.TerminalNotWorkException
 import com.rosan.installer.ext.util.closeQuietly
+import com.rosan.installer.ext.util.coroutines.SuspendLazy
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import java.util.StringTokenizer
 
-class TerminalServiceManager(private val shell: String) : ServiceManager, KoinComponent {
-    private val context by inject<Context>()
-
-    private val command = mutableListOf<String>().also {
+class TerminalServiceManager(private val context: Context, val shell: String) : ServiceManager,
+    KoinComponent {
+    private val terminalLoader = SuspendLazy<AppProcess.Terminal> {
+        val command = mutableListOf<String>()
         val st = StringTokenizer(shell)
-        while (st.hasMoreTokens()) it.add(st.nextToken())
-    }
+        while (st.hasMoreTokens()) command.add(st.nextToken())
 
-    private val terminal by lazy {
-        object : AppProcess.Terminal() {
-            override fun newTerminal(): List<String> = command
-        }.also {
-            if (it.init(context)) return@also
+        val obj = object : AppProcess.Terminal() {
+            override fun newTerminal(): List<String?> {
+                return command
+            }
+        }
+        withContext(Dispatchers.IO) {
+            if (obj.init(context)) return@withContext obj
             if (command.firstOrNull() == "su") throw RootNotWorkException()
             throw TerminalNotWorkException("Terminal start failed. Check permissions or commands: $shell")
         }
     }
 
-    override suspend fun ping(): Boolean = runCatching { terminal.init() }.isSuccess
+    override suspend fun ensureConnected() {
+        terminalLoader.get().init(context)
+    }
 
-    override suspend fun binderWrapper(binder: IBinder): IBinder = terminal.binderWrapper(binder)
+    override suspend fun binderWrapper(binder: IBinder): IBinder =
+        terminalLoader.get().binderWrapper(binder)
 
     override suspend fun serviceBinder(className: String): IBinder =
-        terminal.serviceBinder(ComponentName(context, className))
+        terminalLoader.get().serviceBinder(ComponentName(context, className))
 
     override fun close() {
-        terminal.closeQuietly()
+        runBlocking {
+            terminalLoader.get().closeQuietly()
+            terminalLoader.clear()
+        }
     }
 }

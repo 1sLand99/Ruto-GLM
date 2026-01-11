@@ -1,35 +1,49 @@
 package com.rosan.ruto.ui.compose
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Monitor
 import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.twotone.HourglassTop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,7 +53,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.rosan.ruto.ui.Destinations
@@ -53,6 +68,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ScreenListScreen(navController: NavController, insets: WindowInsets) {
     val viewModel: ScreenListViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsState()
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     var showCreateDialog by remember { mutableStateOf(false) }
     var selectedDisplayIds by remember { mutableStateOf(emptySet<Int>()) }
@@ -78,37 +94,89 @@ fun ScreenListScreen(navController: NavController, insets: WindowInsets) {
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            TopAppBar(
-                title = { Text(if (isInSelectionMode) "${selectedDisplayIds.size} selected" else "Screen List") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+            AnimatedContent(
+                targetState = isInSelectionMode, transitionSpec = {
+                    if (targetState) {
+                        slideInVertically { height -> height } togetherWith slideOutVertically { height -> -height }
+                    } else {
+                        slideInVertically { height -> -height } togetherWith slideOutVertically { height -> height }
                     }
-                },
-                actions = {
-                    if (isInSelectionMode) {
-                        IconButton(onClick = {
-                            selectedDisplayIds = uiState.displays.map { it.displayId }.toSet()
-                        }) {
-                            Icon(Icons.Default.SelectAll, contentDescription = "Select All")
+                }, label = "TopAppBar"
+            ) { selectionModeActive ->
+                if (selectionModeActive) {
+                    TopAppBar(
+                        title = {
+                            AnimatedContent(
+                                targetState = selectedDisplayIds.size, transitionSpec = {
+                                    if (targetState > initialState) {
+                                        (slideInVertically { height -> height } + fadeIn()) togetherWith (slideOutVertically { height -> -height } + fadeOut())
+                                    } else {
+                                        (slideInVertically { height -> -height } + fadeIn()) togetherWith (slideOutVertically { height -> height } + fadeOut())
+                                    }.using(SizeTransform(clip = false))
+                                }, label = "TextPushAnimation"
+                            ) { targetSize ->
+                                Text(text = "$targetSize selected")
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { selectedDisplayIds = emptySet() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = {
+                                selectedDisplayIds = uiState.displays.map { it.displayId }.toSet()
+                            }) {
+                                Icon(Icons.Default.SelectAll, contentDescription = "Select All")
+                            }
                         }
-                    }
+                    )
+                } else {
+                    LargeTopAppBar(
+                        title = {
+                            Column {
+                                Text(
+                                    "Screens",
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    "View and capture device screens",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = FontWeight.Normal
+                                )
+                            }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back"
+                                )
+                            }
+                        },
+                        scrollBehavior = scrollBehavior,
+                        colors = TopAppBarDefaults.largeTopAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surface
+                        )
+                    )
                 }
-            )
+            }
         },
         floatingActionButton = {
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                AnimatedVisibility(visible = isInSelectionMode) {
+                AnimatedVisibility(
+                    visible = isInSelectionMode,
+                    enter = fadeIn() + scaleIn(),
+                    exit = fadeOut() + scaleOut()
+                ) {
                     FloatingActionButton(
                         onClick = {
-                            // 修改：点击悬浮按钮预览选中的多个屏幕
                             navigateToMultiTask(selectedDisplayIds.toList())
                         },
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -140,52 +208,80 @@ fun ScreenListScreen(navController: NavController, insets: WindowInsets) {
         }
 
         PullToRefreshBox(
-            modifier = Modifier.padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
             isRefreshing = uiState.displays.isNotEmpty() && uiState.isRefreshing,
-            onRefresh = { viewModel.loadDisplays() }
+            onRefresh = { viewModel.loadDisplays() },
+            state = rememberPullToRefreshState()
         ) {
-            if (uiState.displays.isEmpty() && uiState.isRefreshing) {
-                val infiniteTransition =
-                    rememberInfiniteTransition(label = "loading_indicator_scale")
-                val scale by infiniteTransition.animateFloat(
-                    initialValue = 1f, targetValue = 1.5f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(800),
-                        repeatMode = RepeatMode.Reverse
-                    ), label = "scale"
-                )
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.TwoTone.HourglassTop,
-                        contentDescription = "Loading...",
-                        modifier = Modifier.scale(scale)
-                    )
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(16.dp)
-                ) {
-                    items(uiState.displays, key = { it.displayId }) { display ->
-                        ScreenListItem(
-                            display = display,
-                            isSelected = display.displayId in selectedDisplayIds,
-                            onDelete = { viewModel.release(display.displayId) },
-                            // 修改：预览按钮跳转多任务预览（单元素列表）
-                            onPreview = { navigateToMultiTask(listOf(display.displayId)) },
-                            onClick = {
-                                if (isInSelectionMode) {
-                                    toggleSelection(display.displayId)
-                                } else {
-                                    // 修改：普通点击也跳转多任务预览（单元素列表）
-                                    navigateToMultiTask(listOf(display.displayId))
-                                }
-                            },
-                            onLongClick = {
-                                toggleSelection(display.displayId)
-                            }
+            AnimatedContent(
+                targetState = uiState.displays.isEmpty(),
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(500)) + expandVertically()) togetherWith
+                            (fadeOut(animationSpec = tween(500)) + shrinkVertically())
+                },
+                label = "ContentAnimation"
+            ) { isEmpty ->
+                if (isEmpty) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Monitor,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "No screens found",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            "Pull down to refresh or add a virtual screen",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        contentPadding = PaddingValues(
+                            start = 24.dp,
+                            end = 24.dp,
+                            top = 8.dp,
+                            bottom = 80.dp
+                        )
+                    ) {
+                        items(uiState.displays, key = { it.displayId }) { display ->
+                            Box(modifier = Modifier.animateItem()) {
+                                ScreenListItem(
+                                    display = display,
+                                    isSelected = display.displayId in selectedDisplayIds,
+                                    onDelete = { viewModel.release(display.displayId) },
+                                    onPreview = { navigateToMultiTask(listOf(display.displayId)) },
+                                    onClick = {
+                                        if (isInSelectionMode) {
+                                            toggleSelection(display.displayId)
+                                        } else {
+                                            navigateToMultiTask(listOf(display.displayId))
+                                        }
+                                    },
+                                    onLongClick = {
+                                        toggleSelection(display.displayId)
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }

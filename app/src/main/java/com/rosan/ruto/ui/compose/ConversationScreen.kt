@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -67,6 +68,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -85,6 +87,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -135,8 +138,20 @@ fun ConversationScreen(navController: NavController, insets: WindowInsets, conve
         topBar = {
             TopAppBar(
                 title = {
-                    if (isInSelectionMode) Text("${selectedMessages.size} selected")
-                    else Text("Conversation")
+                    Column {
+                        Text(
+                            if (isInSelectionMode) "${selectedMessages.size} selected" else "Conversation",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (!isInSelectionMode) {
+                            Text(
+                                "AI Assistant is ready",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = {
@@ -158,7 +173,11 @@ fun ConversationScreen(navController: NavController, insets: WindowInsets, conve
                             Icon(Icons.Default.Delete, contentDescription = null)
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                )
             )
         },
         contentWindowInsets = insets
@@ -168,10 +187,10 @@ fun ConversationScreen(navController: NavController, insets: WindowInsets, conve
             state = listState,
             reverseLayout = true,
             contentPadding = PaddingValues(
-                start = 8.dp, end = 8.dp, top = 8.dp,
-                bottom = bottomBarHeight + 8.dp
+                start = 16.dp, end = 16.dp, top = 16.dp,
+                bottom = bottomBarHeight + 16.dp
             ) + padding.only(WindowInsetsSides.Vertical),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             itemsIndexed(
                 messages.reversed(),
@@ -241,64 +260,73 @@ fun ConversationFloatingBar(
 
     Card(
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 16.dp)
+            .padding(horizontal = 20.dp, vertical = 20.dp)
             .fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(28.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.98f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(vertical = 4.dp)) {
             TextField(
                 value = text,
                 onValueChange = { text = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("msg...") },
+                placeholder = { Text("Ask anything...", style = MaterialTheme.typography.bodyMedium) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
+                    unfocusedIndicatorColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 ),
                 maxLines = 6
             )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { }) {
                         Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary)
                     }
                     IconButton(onClick = { imagePickerLauncher.launch("image/*") }) {
-                        Icon(Icons.Default.AddPhotoAlternate, null)
+                        Icon(Icons.Default.AddPhotoAlternate, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
-                AnimatedContent(isRunning, label = "") { running ->
-                    IconButton(onClick = {
-                        if (running) viewModel.stop()
-                        else if (text.isNotBlank()) {
-                            viewModel.add(
-                                MessageModel(
-                                    conversationId = conversationId,
-                                    source = MessageSource.USER,
-                                    type = MessageType.TEXT,
-                                    content = text
+                AnimatedContent(isRunning, label = "SendStopAction") { running ->
+                    Surface(
+                        onClick = {
+                            if (running) viewModel.stop()
+                            else if (text.isNotBlank()) {
+                                viewModel.add(
+                                    MessageModel(
+                                        conversationId = conversationId,
+                                        source = MessageSource.USER,
+                                        type = MessageType.TEXT,
+                                        content = text
+                                    )
                                 )
+                                text = ""
+                            }
+                        },
+                        shape = CircleShape,
+                        color = if (text.isNotBlank() || running) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (running) Icons.Default.Stop else Icons.AutoMirrored.Filled.Send,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = if (text.isNotBlank() || running) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                             )
-                            text = ""
                         }
-                    }) {
-                        Icon(
-                            imageVector = if (running) Icons.Default.Stop else Icons.AutoMirrored.Filled.Send,
-                            contentDescription = null,
-                            tint = if (text.isNotBlank() || running) MaterialTheme.colorScheme.primary else Color.Gray
-                        )
                     }
                 }
             }
@@ -326,17 +354,21 @@ fun MessageBubble(
             message.source == MessageSource.SYSTEM
 
     val bubbleShape =
-        if (isUser) MaterialTheme.shapes.large.copy(bottomEnd = CornerSize(0.dp))
-        else MaterialTheme.shapes.large.copy(bottomStart = CornerSize(0.dp))
+        if (isUser) RoundedCornerShape(20.dp, 20.dp, 4.dp, 20.dp)
+        else RoundedCornerShape(20.dp, 20.dp, 20.dp, 4.dp)
 
-    val horizontalPadding = if (isUser) PaddingValues(start = 24.dp) else PaddingValues(end = 24.dp)
+    val horizontalPadding = if (isUser) PaddingValues(start = 48.dp) else PaddingValues(end = 48.dp)
 
     val bubbleColor by animateColorAsState(
-        if (isSelected) MaterialTheme.colorScheme.surfaceVariant
+        if (isSelected) MaterialTheme.colorScheme.primaryContainer
         else if (message.type == MessageType.ERROR) MaterialTheme.colorScheme.errorContainer
-        else if (isUser) MaterialTheme.colorScheme.secondary
-        else MaterialTheme.colorScheme.inversePrimary
+        else if (isUser) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     )
+
+    val contentColor = if (isUser && !isSelected) MaterialTheme.colorScheme.onPrimary 
+                       else if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                       else MaterialTheme.colorScheme.onSurface
 
     Column(
         modifier = modifier
@@ -351,17 +383,8 @@ fun MessageBubble(
                 interactionSource = remember { MutableInteractionSource() }
             )
             .padding(padding),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text(
-            text = formatTimestamp(message.createdAt),
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier
-                .align(if (isUser) Alignment.End else Alignment.Start)
-                .padding(horizontalPadding),
-            color = LocalContentColor.current.copy(alpha = 0.5f)
-        )
-
         Row(
             modifier = modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -375,7 +398,8 @@ fun MessageBubble(
                 Surface(
                     shape = bubbleShape,
                     color = bubbleColor,
-                    tonalElevation = 1.dp
+                    contentColor = contentColor,
+                    tonalElevation = if (isUser) 0.dp else 1.dp
                 ) {
                     when (message.type) {
                         MessageType.TEXT, MessageType.ERROR -> {
@@ -387,10 +411,10 @@ fun MessageBubble(
                                     SelectionContainer {
                                         RichText(
                                             modifier = Modifier
-                                                .padding(12.dp)
+                                                .padding(horizontal = 16.dp, vertical = 12.dp)
                                                 .then(
                                                     if (!isExpanded && message.content.length > 150) Modifier.heightIn(
-                                                        max = 200.dp
+                                                        max = 240.dp
                                                     )
                                                     else Modifier
                                                 )
@@ -411,9 +435,9 @@ fun MessageBubble(
                                                     verticalGradient(
                                                         listOf(
                                                             Color.Transparent,
-                                                            bubbleColor.copy(alpha = 0.7f)
+                                                            bubbleColor.copy(alpha = 0.8f)
                                                         ),
-                                                        startY = 300f
+                                                        startY = 400f
                                                     )
                                                 )
                                         )
@@ -426,8 +450,9 @@ fun MessageBubble(
                             AsyncImage(
                                 model = message.content, contentDescription = null,
                                 modifier = Modifier
-                                    .sizeIn(maxWidth = 240.dp, maxHeight = 320.dp)
-                                    .border(4.dp, color = bubbleColor, shape = bubbleShape)
+                                    .sizeIn(maxWidth = 260.dp, maxHeight = 360.dp)
+                                    .clip(bubbleShape)
+                                    .border(1.dp, color = MaterialTheme.colorScheme.outlineVariant, shape = bubbleShape)
                             )
                         }
                     }
@@ -450,13 +475,15 @@ fun MessageBubble(
                 RadioButton(
                     selected = isSelected,
                     onClick = onToggleSelection,
-                    modifier = Modifier.padding(end = 8.dp)
+                    modifier = Modifier.padding(start = 8.dp)
                 )
             }
         }
 
         if (!isUser && isLastMessage && isRunning) {
-            TypingIndicator(color = LocalContentColor.current)
+            Box(modifier = Modifier.padding(horizontalPadding)) {
+                TypingIndicator(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+            }
         }
     }
 }
@@ -469,16 +496,16 @@ fun formatTimestamp(timestamp: Long): String {
     val pattern = when {
         now.get(Calendar.YEAR) == msg.get(Calendar.YEAR) &&
                 now.get(Calendar.DAY_OF_YEAR) == msg.get(Calendar.DAY_OF_YEAR) -> {
-            "HH:mm:ss"
+            "HH:mm"
         }
 
 
         now.get(Calendar.YEAR) == msg.get(Calendar.YEAR) -> {
-            "MM-dd HH:mm:ss"
+            "MM-dd HH:mm"
         }
 
         else -> {
-            "yyyy-MM-dd HH:mm:ss"
+            "yyyy-MM-dd HH:mm"
         }
     }
 
@@ -489,15 +516,14 @@ fun formatTimestamp(timestamp: Long): String {
 fun TypingIndicator(color: Color) {
     val transition = rememberInfiniteTransition(label = "typing")
 
-    // 创建三个点的动画值，每个点都有延迟
     val alphas = (0..2).map { index ->
         transition.animateFloat(
-            initialValue = 0.3f,
+            initialValue = 0.2f,
             targetValue = 1f,
             animationSpec = infiniteRepeatable(
                 animation = tween(600, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse,
-                initialStartOffset = StartOffset(index * 200) // 错开时间
+                initialStartOffset = StartOffset(index * 200)
             ),
             label = "alpha_$index"
         ).value
@@ -506,7 +532,7 @@ fun TypingIndicator(color: Color) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.padding(horizontal = 4.dp)
+        modifier = Modifier.padding(vertical = 4.dp)
     ) {
         alphas.forEach { alpha ->
             Box(

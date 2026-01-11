@@ -1,6 +1,5 @@
 package com.rosan.ruto.ruto
 
-import android.util.Log
 import com.rosan.ruto.ruto.script.RutoRuntime
 
 object GLMCommandParser {
@@ -18,14 +17,14 @@ object GLMCommandParser {
         data class Completed(val command: Command, val fragments: List<String>) : Status() {
             // 优雅的参数提取：只取 Marker 之间的内容
             val arguments: List<String> = if (fragments.size >= command.markerList.size) {
-                fragments.subList(1, command.markerList.size)
+                fragments.subList(1, command.markerList.size).map { it.trim() }
             } else emptyList()
 
             // 提取指令前后的正文内容
             val prefixContent: String = fragments.first()
             val suffixContent: String = fragments.last()
 
-            fun callFunction(runtime: RutoRuntime): Any {
+            suspend fun callFunction(runtime: RutoRuntime): Any {
                 return runtime.callFunction(command.mapping, arguments = arguments.toTypedArray())
             }
         }

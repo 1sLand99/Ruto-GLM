@@ -7,7 +7,7 @@ open class RutoRuntime {
     }
 
     fun registerFunction(
-        name: String, action: RutoFunction.Scope.() -> Any
+        name: String, action: suspend RutoFunction.Scope.() -> Any
     ) {
         registerFunction(name, RutoFunction {
             RutoASTLiteral.wrap(action())
@@ -18,15 +18,15 @@ open class RutoRuntime {
         name.forEach { functions.remove(it) }
     }
 
-    fun callFunction(name: String, arguments: List<RutoASTLiteral>) =
+    suspend fun callFunction(name: String, arguments: List<RutoASTLiteral>) =
         functions[name]?.action?.invoke(RutoFunction.Scope(arguments))
             ?: throw RutoRuntimeException("Function $name not found")
 
-    fun callFunction(name: String, vararg arguments: Any) {
+    suspend fun callFunction(name: String, vararg arguments: Any) {
         callFunction(name, arguments.map { RutoASTLiteral.wrap(it) })
     }
 
-    fun exec(code: String): Any {
+    suspend fun exec(code: String): Any {
         return RutoInterpreter.interpret(this, code).unwrap()
     }
 }

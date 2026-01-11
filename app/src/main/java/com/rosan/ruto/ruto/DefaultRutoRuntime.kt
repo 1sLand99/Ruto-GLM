@@ -1,12 +1,11 @@
 package com.rosan.ruto.ruto
 
 import android.graphics.PointF
-import android.view.DisplayInfo
-import com.rosan.ruto.device.repo.DeviceRepo
+import com.rosan.ruto.device.DeviceManager
 import com.rosan.ruto.ruto.script.RutoRuntime
 
 class DefaultRutoRuntime(
-    private val device: DeviceRepo,
+    private val deviceManager: DeviceManager,
     private val displayId: Int
 ) : RutoRuntime() {
     init {
@@ -26,60 +25,57 @@ class DefaultRutoRuntime(
             swipe(arg(0), arg(1), arg(2), arg(3))
         }
         registerFunction("back") {
-            device.inputManager.clickBack(displayId)
+            deviceManager.getInputManager().clickBack(displayId)
         }
         registerFunction("home") {
-            device.inputManager.clickHome(displayId)
+            deviceManager.getInputManager().clickHome(displayId)
         }
 
         registerFunction("text") {
-            device.imeManager.text(args.joinToString(""))
+            deviceManager.getInputMethodManager().text(args.joinToString(""))
         }
         registerFunction("type") {
-            device.imeManager.print(args.joinToString(""))
+            deviceManager.getInputMethodManager().print(args.joinToString(""))
         }
         registerFunction("clear") {
-            device.imeManager.clear()
+            deviceManager.getInputMethodManager().clear()
         }
         registerFunction("wait") {
             Thread.sleep(arg<Long>(0) * 1000)
         }
     }
 
-    val displayManager by lazy {
-        device.displayManager
+    private suspend fun launch(name: String) {
+        deviceManager.getActivityManager().startLabel(name, displayId)
     }
 
-    val displayInfo: DisplayInfo
-        get() = displayManager.getDisplayInfo(displayId)
-
-    private fun launch(name: String) {
-        device.activityManager.startLabel(name, displayId)
-    }
-
-    private fun click(xt: Float, yt: Float) {
+    private suspend fun click(xt: Float, yt: Float) {
+        val displayInfo = deviceManager.getDisplayManager().getDisplayInfo(displayId)
         val x = xt * displayInfo.logicalWidth / 1000
         val y = yt * displayInfo.logicalHeight / 1000
-        device.inputManager.click(PointF(x, y), displayId)
+        deviceManager.getInputManager().click(PointF(x, y), displayId)
     }
 
-    private fun doubleClick(xt: Float, yt: Float) {
+    private suspend fun doubleClick(xt: Float, yt: Float) {
+        val displayInfo = deviceManager.getDisplayManager().getDisplayInfo(displayId)
         val x = xt * displayInfo.logicalWidth / 1000
         val y = yt * displayInfo.logicalHeight / 1000
-        device.inputManager.doubleClick(PointF(x, y), displayId)
+        deviceManager.getInputManager().doubleClick(PointF(x, y), displayId)
     }
 
-    private fun longClick(xt: Float, yt: Float) {
+    private suspend fun longClick(xt: Float, yt: Float) {
+        val displayInfo = deviceManager.getDisplayManager().getDisplayInfo(displayId)
         val x = xt * displayInfo.logicalWidth / 1000
         val y = yt * displayInfo.logicalHeight / 1000
-        device.inputManager.longClick(PointF(x, y), displayId)
+        deviceManager.getInputManager().longClick(PointF(x, y), displayId)
     }
 
-    private fun swipe(x1t: Float, y1t: Float, x2t: Float, y2t: Float) {
+    private suspend fun swipe(x1t: Float, y1t: Float, x2t: Float, y2t: Float) {
+        val displayInfo = deviceManager.getDisplayManager().getDisplayInfo(displayId)
         val x1 = x1t * displayInfo.logicalWidth / 1000
         val y1 = y1t * displayInfo.logicalHeight / 1000
         val x2 = x2t * displayInfo.logicalWidth / 1000
         val y2 = y2t * displayInfo.logicalHeight / 1000
-        device.inputManager.swipe(PointF(x1, y1), PointF(x2, y2), displayId)
+        deviceManager.getInputManager().swipe(PointF(x1, y1), PointF(x2, y2), displayId)
     }
 }
